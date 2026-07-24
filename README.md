@@ -1,36 +1,103 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ReFind — Lost & Found
 
-## Getting Started
+A community lost-and-found app: browse reported finds on a map for free, no account needed. Signing up is only
+required to report a find or claim one. Ownership is verified with system-generated questions before finder and
+claimer ever contact each other, and handover happens directly between the two of them over WhatsApp — ReFind
+never sends messages on your behalf and isn't part of the exchange itself.
 
-First, run the development server:
+## Stack
+
+| Layer     | Technology                                    | Why                                    |
+|-----------|------------------------------------------------|-----------------------------------------|
+| Framework | Next.js 16 (App Router) + TypeScript + Tailwind CSS 4 | Server actions for all mutations, no separate API layer |
+| Auth      | Better Auth (self-hosted, email + password)   | Runs inside Next.js, no external auth service |
+| Database  | Neon serverless Postgres + PostGIS            | Real proximity search (`ST_DWithin` on a GIST index), scale-to-zero |
+| Storage   | Cloudflare R2 (S3-compatible)                 | Photo storage, zero egress fees |
+| Maps      | Leaflet.js + OpenStreetMap                    | No API key, no per-request cost |
+
+## Features
+
+- **Browse without an account** — map + list of reported finds, city picker or IP-based auto-detect (no
+  location permission needed), or precise "use current location" with the browser's own prompt.
+- **Report a find** — up to 3 photos with an in-browser blur brush (pixelation, not just soft blur — actually
+  destroys the underlying detail) to redact identifying information before upload, auto-generated verification
+  questions per category, fuzzed drop-pin location (~150m offset) so the exact spot is never public.
+- **Claim a find** — answer the two verification questions; the finder reviews the answers plus the claimer's
+  ID type/last-four digits before approving.
+- **Handover** — once approved, a WhatsApp deep link opens between finder and claimer; both sides confirm the
+  handover independently before the item is marked returned.
+- **Manage your own reports** — edit, review incoming claims, or delete a report yourself (only while it's still
+  unclaimed, so a completed handover's history can't be destroyed).
+- Installable PWA (manifest + service worker).
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 20+
+- A [Neon](https://neon.tech) Postgres database with the `postgis` extension available
+- A [Cloudflare R2](https://dash.cloudflare.com) bucket (optional in dev — falls back to storing images as base64
+  data URLs if R2 credentials aren't set)
+
+### Setup
+
+```bash
+npm install
+cp .env.example .env   # fill in DATABASE_URL, BETTER_AUTH_SECRET, R2_* (see below)
+```
+
+Run `lib/schema.sql` against your Neon database once (via the Neon SQL editor or `psql`) to create the tables,
+indexes, row-level security policies, and seed the category question bank.
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | Yes | Neon Postgres connection string |
+| `BETTER_AUTH_SECRET` | Yes | `openssl rand -base64 32` |
+| `BETTER_AUTH_URL` | Yes | `http://localhost:3000` in dev |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | No | Omit to store uploaded photos as inline base64 data URLs instead |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+| Command | Does |
+|---|---|
+| `npm run dev` | Start the dev server |
+| `npm run build` | Production build |
+| `npm run start` | Run a production build |
+| `npm run lint` | ESLint |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+├── page.tsx                 # Explore — map + browse, city/IP-based location
+├── auth/                    # Login / signup
+├── items/
+│   ├── new/                 # Report a find
+│   ├── [id]/                # Public item detail + claim form
+│   └── my/                  # Your reported items + management
+├── claims/
+│   ├── [id]/                # Claim review + WhatsApp handoff
+│   └── my/                  # Your claim attempts
+├── profile/                 # Account + logout
+├── components/              # Shell (nav), map, photo picker/redactor, UI kit
+└── actions/                 # Server actions — all mutations & queries live here
+lib/
+├── auth.ts, auth-client.ts  # Better Auth server/client instances
+├── db.ts, schema.ts/.sql    # Drizzle ORM + raw DDL (RLS policies, indexes)
+├── location.ts               # Haversine, coordinate fuzzing, popular-cities list
+├── image-redaction.ts        # Client-side compression + pixelation blur
+└── r2.ts                     # Cloudflare R2 upload (falls back to base64)
+```
 
-## Deploy on Vercel
+## Deploying
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Works well on [Vercel](https://vercel.com) with a Neon database and an R2 bucket. Set the environment variables
+above in your hosting provider's dashboard, and make sure `BETTER_AUTH_URL` matches your deployed origin.
