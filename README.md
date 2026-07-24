@@ -1,8 +1,8 @@
-# ReFind — Lost & Found
+# MilGaya — Lost & Found
 
 A community lost-and-found app: browse reported finds on a map for free, no account needed. Signing up is only
 required to report a find or claim one. Ownership is verified with system-generated questions before finder and
-claimer ever contact each other, and handover happens directly between the two of them over WhatsApp — ReFind
+claimer ever contact each other, and handover happens directly between the two of them over WhatsApp — MilGaya
 never sends messages on your behalf and isn't part of the exchange itself.
 
 ## Stack
@@ -23,11 +23,11 @@ never sends messages on your behalf and isn't part of the exchange itself.
   destroys the underlying detail) to redact identifying information before upload, auto-generated verification
   questions per category, fuzzed drop-pin location (~150m offset) so the exact spot is never public.
 - **Claim a find** — answer the two verification questions; the finder reviews the answers plus the claimer's
-  ID type/last-four digits before approving.
-- **Handover** — once approved, a WhatsApp deep link opens between finder and claimer; both sides confirm the
-  handover independently before the item is marked returned.
-- **Manage your own reports** — edit, review incoming claims, or delete a report yourself (only while it's still
-  unclaimed, so a completed handover's history can't be destroyed).
+  ID type/last-four digits before approving. Verification answers are encrypted at rest, not stored as plain text.
+- **Handover** — once approved, a WhatsApp deep link opens between finder and claimer (either side can start the
+  conversation); both sides confirm the handover independently before the item is marked returned.
+- **Manage your own reports** — edit, review incoming claims, or delete a report yourself (only while it has no
+  claims yet, so an in-progress or completed handover's history can't be destroyed).
 - Installable PWA (manifest + service worker).
 
 ## Getting started
@@ -46,8 +46,14 @@ npm install
 cp .env.example .env   # fill in DATABASE_URL, BETTER_AUTH_SECRET, R2_* (see below)
 ```
 
-Run `lib/schema.sql` against your Neon database once (via the Neon SQL editor or `psql`) to create the tables,
-indexes, row-level security policies, and seed the category question bank.
+Run `lib/schema.sql` against your Neon database once (via the Neon SQL editor or `psql`, connected as the
+database owner) to create the tables, indexes, row-level security policies, the `refind_app` role, and seed the
+category question bank. **Change the placeholder password** in the `CREATE ROLE refind_app` statement before
+running it, or `ALTER ROLE refind_app WITH PASSWORD '...'` afterward.
+
+`DATABASE_URL` must point at the `refind_app` role, **not** the database owner — table owners bypass row-level
+security entirely, which would silently disable every access-control policy in `schema.sql`. Keep an owner
+connection string around separately (e.g. as `DATABASE_URL_OWNER`, unused by app code) for future migrations.
 
 ```bash
 npm run dev
@@ -59,9 +65,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Variable | Required | Notes |
 |---|---|---|
-| `DATABASE_URL` | Yes | Neon Postgres connection string |
+| `DATABASE_URL` | Yes | Neon Postgres connection string, connected as the `refind_app` role (see above) |
 | `BETTER_AUTH_SECRET` | Yes | `openssl rand -base64 32` |
 | `BETTER_AUTH_URL` | Yes | `http://localhost:3000` in dev |
+| `ANSWER_ENCRYPTION_KEY` | No | Encrypts stored verification answers at rest. Falls back to `BETTER_AUTH_SECRET` if unset — set it explicitly in production so rotating the auth secret doesn't also break decryption of existing answers |
 | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL` | No | Omit to store uploaded photos as inline base64 data URLs instead |
 
 ## Scripts
@@ -91,7 +98,8 @@ app/
 └── actions/                 # Server actions — all mutations & queries live here
 lib/
 ├── auth.ts, auth-client.ts  # Better Auth server/client instances
-├── db.ts, schema.ts/.sql    # Drizzle ORM + raw DDL (RLS policies, indexes)
+├── db.ts, schema.ts/.sql    # Drizzle ORM + raw DDL (RLS policies, app role, indexes)
+├── crypto.ts                 # Encrypt/decrypt verification answers at rest
 ├── location.ts               # Haversine, coordinate fuzzing, popular-cities list
 ├── image-redaction.ts        # Client-side compression + pixelation blur
 └── r2.ts                     # Cloudflare R2 upload (falls back to base64)

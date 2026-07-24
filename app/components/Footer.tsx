@@ -5,7 +5,7 @@ export function Footer() {
   return (
     <footer className="mt-auto pt-6 pb-4 px-6 text-center">
       <p className="text-[11px] text-ink-faint">
-        © {year} ReFind ·{' '}
+        © {year} MilGaya ·{' '}
         <Link href="/privacy" className="hover:text-ink-soft transition-colors">
           Privacy Policy
         </Link>{' '}

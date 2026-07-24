@@ -39,7 +39,7 @@ function Logo({ compact = false }: { compact?: boolean }) {
         />
         <circle cx="32" cy="24" r="4.5" fill="#1D4ED8" />
       </svg>
-      <span className={`${compact ? 'text-base' : 'text-lg'} font-extrabold tracking-tight`}>ReFind</span>
+      <span className={`${compact ? 'text-base' : 'text-lg'} font-extrabold tracking-tight`}>MilGaya</span>
     </Link>
   );
 }

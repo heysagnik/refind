@@ -12,7 +12,7 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "ReFind — Lost & Found",
+  title: "MilGaya — Lost & Found",
   description: "Report and reclaim lost items in your community. Privacy-first, free.",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "ReFind",
+    title: "MilGaya",
   },
 };
 

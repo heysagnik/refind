@@ -12,9 +12,9 @@ export default function TermsPage() {
         </p>
 
         <section className="flex flex-col gap-2">
-          <h2 className="text-[16px] font-bold text-ink">What ReFind is</h2>
+          <h2 className="text-[16px] font-bold text-ink">What MilGaya is</h2>
           <p>
-            ReFind is a free tool for reporting and reclaiming lost items in your community. It connects finders
+            MilGaya is a free tool for reporting and reclaiming lost items in your community. It connects finders
             and owners and helps verify a claim before contact is made. It doesn&rsquo;t charge for anything, and
             it isn&rsquo;t a courier, storage, or escrow service.
           </p>
@@ -33,7 +33,7 @@ export default function TermsPage() {
           <h2 className="text-[16px] font-bold text-ink">Handovers happen between you, not through us</h2>
           <p>
             Once a claim is approved, the finder and claimer coordinate return of the item directly over
-            WhatsApp, at a time and place they agree on themselves. ReFind isn&rsquo;t present for that exchange
+            WhatsApp, at a time and place they agree on themselves. MilGaya isn&rsquo;t present for that exchange
             and can&rsquo;t guarantee it happens safely or at all — use the same judgment you would meeting anyone
             from the internet: pick a public place, and verify identity as far as you&rsquo;re comfortable with.
           </p>

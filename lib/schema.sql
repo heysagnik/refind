@@ -144,17 +144,27 @@ INSERT INTO category_questions (category, question_text) VALUES
 ('other', 'Any distinctive features?');
 
 -- ── Row-Level Security ───────────────────────────────────────
--- Enable RLS on all tables
+-- Enable RLS on all tables. FORCE means it also applies to the tables' owner —
+-- without FORCE, RLS is silently bypassed by whichever role owns the tables,
+-- which is exactly the role the app used to connect as.
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles FORCE ROW LEVEL SECURITY;
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items FORCE ROW LEVEL SECURITY;
 ALTER TABLE claims ENABLE ROW LEVEL SECURITY;
+ALTER TABLE claims FORCE ROW LEVEL SECURITY;
 ALTER TABLE category_questions ENABLE ROW LEVEL SECURITY;
 
--- profiles: owner-only
+-- profiles: owner-only for writes (kept from before)
 CREATE POLICY profiles_owner ON profiles
   FOR ALL USING (id = current_setting('app.current_user_id', true)::uuid)
   WITH CHECK (id = current_setting('app.current_user_id', true)::uuid);
+
+-- profiles: display name + WhatsApp/doc info are shown across users once a
+-- claim links them (finder <-> claimer), and finder name is shown publicly on
+-- item pages — so reads are public; profiles_owner above still gates writes.
+CREATE POLICY profiles_public_select ON profiles FOR SELECT USING (true);
 
 -- profiles: insert allowed for new signups
 CREATE POLICY profiles_insert ON profiles FOR INSERT WITH CHECK (true);
@@ -170,6 +180,10 @@ CREATE POLICY items_finder_all ON items FOR ALL
 -- items: insert for authenticated finders
 CREATE POLICY items_finder_insert ON items FOR INSERT
   WITH CHECK (finder_id = current_setting('app.current_user_id', true)::uuid);
+
+-- claims: publicly visible on the item detail page (status + claimer name),
+-- same as items — the app itself narrows which columns get selected there.
+CREATE POLICY claims_public_select ON claims FOR SELECT USING (true);
 
 -- claims: finder sees claims on own items
 CREATE POLICY claims_finder_select ON claims FOR SELECT
@@ -196,12 +210,38 @@ CREATE POLICY claims_finder_update ON claims FOR UPDATE
 
 -- claims: claimer can update own confirmed
 CREATE POLICY claims_claimer_update ON claims FOR UPDATE
-  USING (claimer_id = current_setting('app.current_user_id', true)::uuid);
+  USING (claimer_id = current_setting('app.current_user_id', true)::uuid)
+  WITH CHECK (claimer_id = current_setting('app.current_user_id', true)::uuid);
+
+-- claims: finder can delete claims on own items (needed so deleting an item
+-- can cascade-delete its rejected claims — DELETE has no implicit policy)
+CREATE POLICY claims_finder_delete ON claims FOR DELETE
+  USING (item_id IN (
+    SELECT id FROM items WHERE finder_id = current_setting('app.current_user_id', true)::uuid
+  ));
 
 -- category_questions: public read
 CREATE POLICY category_questions_select ON category_questions FOR SELECT USING (true);
 
--- ── Column-level grants: restrict raw_location + reference answers ──
+-- ── Column-level grants: restrict raw_location from the app's own role ──
+-- (answer_1/answer_2 must stay readable by the app role — it decrypts and
+-- displays them to the finder during claim review.)
 
 REVOKE SELECT (raw_location) ON items FROM PUBLIC;
-REVOKE SELECT (answer_1, answer_2) ON items FROM PUBLIC;
+
+-- ── App role ───────────────────────────────────────────────
+-- The app MUST connect as this role, not as the table owner — table owners
+-- bypass RLS entirely (including FORCE ROW LEVEL SECURITY above), which would
+-- silently disable every policy defined in this file. Change the password
+-- before running this against a real database.
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'refind_app') THEN
+    CREATE ROLE refind_app WITH LOGIN PASSWORD 'change-me';
+  END IF;
+END $$;
+
+GRANT USAGE ON SCHEMA public TO refind_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "user", "session", "account", "verification" TO refind_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON profiles, items, claims TO refind_app;
+GRANT SELECT ON category_questions TO refind_app;

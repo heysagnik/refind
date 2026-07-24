@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ReFind — Lost & Found",
-    short_name: "ReFind",
+    name: "MilGaya — Lost & Found",
+    short_name: "MilGaya",
     description: "Report and reclaim lost items in your community.",
     start_url: "/",
     display: "standalone",

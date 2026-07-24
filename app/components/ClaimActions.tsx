@@ -73,8 +73,20 @@ export function ClaimActions({ claimId, status, finderConfirmed, claimerConfirme
   return <p className="text-sm text-ink-soft bg-bg rounded-md px-3.5 py-2.5">Waiting for finder review…</p>;
 }
 
-export function WhatsAppLink({ number, itemTitle }: { number: string; itemTitle: string }) {
-  const text = encodeURIComponent(`Hi! I found your ${itemTitle} on ReFind. Let&rsquo;s coordinate the handover.`);
+export function WhatsAppLink({
+  number,
+  itemTitle,
+  role = 'finder',
+}: {
+  number: string;
+  itemTitle: string;
+  role?: 'finder' | 'claimer';
+}) {
+  const message =
+    role === 'finder'
+      ? `Hi! I found your ${itemTitle} on MilGaya. Let's coordinate the handover.`
+      : `Hi! I claimed the ${itemTitle} you found on MilGaya. Let's coordinate the handover.`;
+  const text = encodeURIComponent(message);
   const url = `https://wa.me/${number.replace(/\D/g, '')}?text=${text}`;
   return (
     <a

@@ -8,7 +8,7 @@ export default function PrivacyPage() {
       <div className="flex flex-col gap-6 text-[15px] text-ink-soft leading-relaxed">
         <p className="text-xs text-ink-faint">
           Last updated {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}. This is a
-          plain-language description of how ReFind actually handles your data, written by the people who built
+          plain-language description of how MilGaya actually handles your data, written by the people who built
           it — not a substitute for reviewed legal counsel.
         </p>
 
@@ -36,8 +36,8 @@ export default function PrivacyPage() {
           <h2 className="text-[16px] font-bold text-ink">Verification answers</h2>
           <p>
             When you report a find, you answer two system-generated questions only the true owner would know.
-            Those answers are stored as salted hashes, not plain text. When someone submits a claim, their typed
-            answers are shown only to the finder reviewing that claim — never made public.
+            Those answers are encrypted at rest, not stored as plain text. When someone submits a claim, their
+            typed answers are shown only to the finder reviewing that claim — never made public.
           </p>
         </section>
 
@@ -46,8 +46,8 @@ export default function PrivacyPage() {
           <p>
             Item listings (title, category, description, fuzzed location, photo) are public and visible without
             an account. A claimer&rsquo;s name and ID type/last-four are shown only to the finder of that specific
-            item, only after a claim is submitted. Full ID numbers, exact locations, and answer hashes are never
-            exposed publicly, at the database level.
+            item, only after a claim is submitted. Full ID numbers, exact locations, and encrypted answers are
+            never exposed publicly, at the database level.
           </p>
         </section>
 
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
             We use OpenStreetMap for map tiles, an IP-lookup service to guess your approximate city so the map
             can center itself without asking for location permission, and Cloudflare R2 to store photos. Once a
             claim is approved, the finder contacts the claimer via a WhatsApp link — that conversation happens
-            directly between you two; ReFind never sends messages on your behalf and isn&rsquo;t part of the
+            directly between you two; MilGaya never sends messages on your behalf and isn&rsquo;t part of the
             handover.
           </p>
         </section>

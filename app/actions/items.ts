@@ -4,10 +4,11 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { items, claims, profiles } from '@/lib/schema';
 import { headers } from 'next/headers';
-import { sql, eq, and, gte } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 import { pickQuestions } from '@/lib/questions';
 import { fuzzCoordinate, reverseGeocode } from '@/lib/location';
 import { uploadToR2 } from '@/lib/r2';
+import { encryptAnswer, decryptAnswer } from '@/lib/crypto';
 import crypto from 'crypto';
 
 export async function createItemAction(formData: FormData) {
@@ -46,25 +47,24 @@ export async function createItemAction(formData: FormData) {
   const fuzzed = fuzzCoordinate(lat, lng);
   const locationName = await reverseGeocode(lat, lng);
 
-  await db.execute(
-    sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`
-  );
-
-  await db.insert(items).values({
-    finderId: session.user.id,
-    title,
-    category,
-    description,
-    imageUrl,
-    imageUrls,
-    locationName,
-    fuzzedLocation: sql`ST_SetSRID(ST_MakePoint(${fuzzed.lng}, ${fuzzed.lat}), 4326)`,
-    rawLocation: sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`,
-    question1: q1,
-    question2: q2,
-    answer1,
-    answer2,
-  });
+  await db.batch([
+    db.execute(sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`),
+    db.insert(items).values({
+      finderId: session.user.id,
+      title,
+      category,
+      description,
+      imageUrl,
+      imageUrls,
+      locationName,
+      fuzzedLocation: sql`ST_SetSRID(ST_MakePoint(${fuzzed.lng}, ${fuzzed.lat}), 4326)`,
+      rawLocation: sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`,
+      question1: q1,
+      question2: q2,
+      answer1: encryptAnswer(answer1),
+      answer2: encryptAnswer(answer2),
+    }),
+  ]);
 }
 
 const PUBLIC_ITEMS_PAGE_SIZE = 24;
@@ -218,34 +218,50 @@ export async function getMyItemDetail(id: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) throw new Error('Unauthorized');
 
-  await db.execute(
-    sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`
-  );
-
-  const itemClaimsRaw = await db
+  const [item] = await db
     .select({
-      id: claims.id,
-      status: claims.status,
-      answer1: claims.answer1,
-      answer2: claims.answer2,
-      finderConfirmed: claims.finderConfirmed,
-      claimerConfirmed: claims.claimerConfirmed,
-      resolvedAt: claims.resolvedAt,
-      createdAt: claims.createdAt,
-      claimerDisplayName: profiles.displayName,
-      claimerDocType: profiles.docType,
-      claimerDocLastFour: profiles.docLastFour,
+      id: items.id,
+      title: items.title,
+      category: items.category,
+      description: items.description,
+      imageUrl: items.imageUrl,
+      imageUrls: items.imageUrls,
+      status: items.status,
+      finderId: items.finderId,
     })
-    .from(claims)
-    .innerJoin(profiles, eq(profiles.id, claims.claimerId))
-    .where(eq(claims.itemId, id))
-    .orderBy(sql`${claims.createdAt} DESC`);
+    .from(items)
+    .where(eq(items.id, id));
+
+  if (!item) return null;
+  if (item.finderId !== session.user.id) throw new Error('Forbidden');
+
+  const [, itemClaimsRaw] = await db.batch([
+    db.execute(sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`),
+    db
+      .select({
+        id: claims.id,
+        status: claims.status,
+        answer1: claims.answer1,
+        answer2: claims.answer2,
+        finderConfirmed: claims.finderConfirmed,
+        claimerConfirmed: claims.claimerConfirmed,
+        resolvedAt: claims.resolvedAt,
+        createdAt: claims.createdAt,
+        claimerDisplayName: profiles.displayName,
+        claimerDocType: profiles.docType,
+        claimerDocLastFour: profiles.docLastFour,
+      })
+      .from(claims)
+      .innerJoin(profiles, eq(profiles.id, claims.claimerId))
+      .where(eq(claims.itemId, id))
+      .orderBy(sql`${claims.createdAt} DESC`),
+  ]);
 
   const itemClaims = itemClaimsRaw.map((c) => ({
     id: c.id,
     status: c.status,
-    answer1: c.answer1,
-    answer2: c.answer2,
+    answer1: decryptAnswer(c.answer1),
+    answer2: decryptAnswer(c.answer2),
     finderConfirmed: c.finderConfirmed,
     claimerConfirmed: c.claimerConfirmed,
     resolvedAt: c.resolvedAt,
@@ -257,29 +273,13 @@ export async function getMyItemDetail(id: string) {
     },
   }));
 
-  const [item] = await db
-    .select({
-      id: items.id,
-      title: items.title,
-      category: items.category,
-      description: items.description,
-      imageUrl: items.imageUrl,
-      imageUrls: items.imageUrls,
-      status: items.status,
-    })
-    .from(items)
-    .where(eq(items.id, id));
-
-  return item ? { ...item, claims: itemClaims } : null;
+  const { finderId: _finderId, ...publicItem } = item;
+  return { ...publicItem, claims: itemClaims };
 }
 
 export async function deleteItemAction(itemId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) throw new Error('Unauthorized');
-
-  await db.execute(
-    sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`
-  );
 
   const [item] = await db
     .select({ finderId: items.finderId, status: items.status })
@@ -292,5 +292,16 @@ export async function deleteItemAction(itemId: string) {
     throw new Error('This report has an in-progress or completed claim and can no longer be deleted');
   }
 
-  await db.delete(items).where(eq(items.id, itemId));
+  const [pending] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(claims)
+    .where(and(eq(claims.itemId, itemId), eq(claims.status, 'pending_review')));
+  if (pending.count > 0) {
+    throw new Error('This report has claims awaiting review and can no longer be deleted');
+  }
+
+  await db.batch([
+    db.execute(sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`),
+    db.delete(items).where(eq(items.id, itemId)),
+  ]);
 }

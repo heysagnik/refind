@@ -27,7 +27,7 @@ export default async function LoginPage({ searchParams }: Props) {
         </form>
 
         <p className="text-center mt-6 text-ink-soft text-sm">
-          New to ReFind?{' '}
+          New to MilGaya?{' '}
           <a href={`/auth/signup?redirect=${encodeURIComponent(redirectTo)}`} className="text-accent font-semibold">
             Create an account
           </a>

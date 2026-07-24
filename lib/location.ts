@@ -64,7 +64,7 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
 }
 
 export function fuzzCoordinate(lat: number, lng: number): { lat: number; lng: number } {
-  const radiusInMeters = 50 + Math.random() * 100;
+  const radiusInMeters = 150;
   const angle = Math.random() * 2 * Math.PI;
 
   const latOffset = (radiusInMeters / 111000) * Math.sin(angle);

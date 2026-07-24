@@ -108,9 +108,13 @@ export default async function ClaimReviewPage({ params }: Props) {
       )}
 
       <section className="mt-auto pt-4">
-        {claim.status === 'approved' && role === 'finder' && !completed && (
+        {claim.status === 'approved' && !completed && (
           <div className="mb-4">
-            <WhatsAppLink number={claim.claimer.whatsappNumber} itemTitle={claim.item.title} />
+            {role === 'finder' ? (
+              <WhatsAppLink number={claim.claimer.whatsappNumber} itemTitle={claim.item.title} role="finder" />
+            ) : (
+              <WhatsAppLink number={claim.item.finderWhatsappNumber} itemTitle={claim.item.title} role="claimer" />
+            )}
           </div>
         )}
         {!completed && (

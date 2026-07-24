@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { headers } from 'next/headers';
 import { profiles } from '@/lib/schema';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { Header } from '@/app/components/ui/Header';
 import { Input, selectClassName } from '@/app/components/ui/Input';
 import { Button } from '@/app/components/ui/Button';
@@ -18,10 +18,13 @@ async function updateProfile(formData: FormData) {
   const docType = String(formData.get('docType') ?? '').trim();
   const docLastFour = String(formData.get('docLastFour') ?? '').trim();
 
-  await db
-    .update(profiles)
-    .set({ displayName, whatsappNumber, docType, docLastFour })
-    .where(eq(profiles.id, session.user.id));
+  await db.batch([
+    db.execute(sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`),
+    db
+      .update(profiles)
+      .set({ displayName, whatsappNumber, docType, docLastFour })
+      .where(eq(profiles.id, session.user.id)),
+  ]);
 
   redirect('/profile');
 }
