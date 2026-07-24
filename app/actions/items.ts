@@ -173,8 +173,11 @@ export async function getItemByIdPublic(id: string) {
       question1: items.question1,
       question2: items.question2,
       finderId: items.finderId,
+      finderName: profiles.displayName,
+      createdAt: items.createdAt,
     })
     .from(items)
+    .innerJoin(profiles, eq(profiles.id, items.finderId))
     .where(eq(items.id, id));
   if (!item) return null;
 

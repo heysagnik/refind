@@ -1,5 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
+import { auth } from '@/lib/auth';
 import { getItemByIdPublic } from '@/app/actions/items';
 import { Chip } from '@/app/components/ui/Chip';
 import { Card, CardBody } from '@/app/components/ui/Card';
@@ -15,9 +17,13 @@ interface Props {
 
 export default async function ItemDetailPage({ params }: Props) {
   const { id } = await params;
-  const item = await getItemByIdPublic(id);
+  const [item, session] = await Promise.all([
+    getItemByIdPublic(id),
+    auth.api.getSession({ headers: await headers() }),
+  ]);
   if (!item) notFound();
 
+  const isOwnItem = session?.user?.id === item.finderId;
   const categoryLabel = categoryLabels[item.category] ?? item.category;
   const photos = item.imageUrls?.length ? item.imageUrls : item.imageUrl ? [item.imageUrl] : [];
 
@@ -65,6 +71,9 @@ export default async function ItemDetailPage({ params }: Props) {
               {item.locationName && (
                 <p className="text-sm text-ink-soft mt-1.5">📍 {item.locationName}</p>
               )}
+              <p className="text-sm text-ink-faint mt-1">
+                Posted by {item.finderName || 'Anonymous'} · {item.createdAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
             </div>
 
             {item.description && (
@@ -120,7 +129,22 @@ export default async function ItemDetailPage({ params }: Props) {
 
           {/* Claim panel — sticky on desktop, inline on mobile */}
           <div className="mt-8 lg:mt-0 lg:sticky lg:top-[96px]">
-            {item.status === 'active' && (
+            {item.status === 'active' && isOwnItem && (
+              <Card className="!shadow-elevated">
+                <CardBody className="!p-5">
+                  <h2 className="text-[18px] font-bold mb-1">This is your report</h2>
+                  <p className="text-ink-soft text-sm mb-5">Review claims and manage this report from your items page.</p>
+                  <Link
+                    href={`/items/my/${item.id}`}
+                    className="inline-flex w-full items-center justify-center rounded-pill px-6 py-3 text-[15px] font-semibold min-h-[48px] bg-accent text-white hover:bg-accent-hover active:scale-[0.98] transition-all duration-150"
+                  >
+                    Manage report
+                  </Link>
+                </CardBody>
+              </Card>
+            )}
+
+            {item.status === 'active' && !isOwnItem && (
               <Card className="!shadow-elevated">
                 <CardBody className="!p-5">
                   <h2 className="text-[18px] font-bold mb-1">Think this is yours?</h2>

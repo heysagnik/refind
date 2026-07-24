@@ -133,6 +133,51 @@ export function CameraIcon(props: IconProps) {
   );
 }
 
+export function EditIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+export function CropIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8}>
+      <path d="M6 2v14a2 2 0 0 0 2 2h14" />
+      <path d="M18 22V8a2 2 0 0 0-2-2H2" />
+    </svg>
+  );
+}
+
+export function BrushIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8}>
+      <path d="M9.06 11.9l8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08" />
+      <path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z" />
+    </svg>
+  );
+}
+
+export function UndoIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8}>
+      <path d="M3 7v6h6" />
+      <path d="M3.51 13a9 9 0 1 0 2.13-9.36L3 7" />
+    </svg>
+  );
+}
+
+export function ResetIcon(props: IconProps) {
+  return (
+    <svg {...base(props)} strokeWidth={1.8}>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  );
+}
+
 export const NAV_TABS = [
   { href: '/', label: 'Explore', icon: CompassIcon },
   { href: '/items/my', label: 'My items', icon: PinIcon },

@@ -18,11 +18,12 @@ export async function submitClaimAction(itemId: string, answer1: string, answer2
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const [item] = await db
-    .select({ answer1Hash: items.answer1Hash, answer2Hash: items.answer2Hash, status: items.status })
+    .select({ answer1Hash: items.answer1Hash, answer2Hash: items.answer2Hash, status: items.status, finderId: items.finderId })
     .from(items)
     .where(eq(items.id, itemId));
 
   if (!item || item.status !== 'active') throw new Error('Item not available');
+  if (item.finderId === session.user.id) throw new Error('You cannot claim your own report');
 
   const a1Ok = await hashAnswer(answer1, item.answer1Hash);
   const a2Ok = await hashAnswer(answer2, item.answer2Hash);

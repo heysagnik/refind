@@ -24,10 +24,10 @@ const categoryEmoji: Record<string, string> = {
   glasses: 'https://em-content.zobj.net/source/apple/453/sunglasses_1f576-fe0f.png',
   watch: 'https://em-content.zobj.net/source/apple/453/watch_231a.png',
   headphones: 'https://em-content.zobj.net/source/apple/453/headphone_1f3a7.png',
-  waterbottle: '🧴',
+  waterbottle: 'https://em-content.zobj.net/source/google/263/lotion-bottle_1f9f4.png',
   umbrella: 'https://em-content.zobj.net/source/apple/453/closed-umbrella_1f302.png',
-  toy: '🧸',
-  other: '📦',
+  toy: 'https://em-content.zobj.net/source/apple/453/teddy-bear_1f9f8.png',
+  other: 'https://em-content.zobj.net/source/apple/453/package_1f4e6.png',
 };
 
 function CategoryIcon({ icon }: { icon: string }) {
