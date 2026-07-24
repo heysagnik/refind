@@ -109,8 +109,6 @@ export interface PublicItem {
   createdAt: Date;
 }
 
-// ST_DWithin uses the GIST index on fuzzed_location (see schema.sql) instead of
-// filtering in JS after the fact, which silently missed matches past one page
 export async function getPublicItems({
   lat,
   lng,
@@ -142,9 +140,6 @@ export async function getPublicItems({
   return { items: rows.slice(0, PUBLIC_ITEMS_PAGE_SIZE), hasMore };
 }
 
-// Sitewide totals for the Explore page header — deliberately unfiltered by
-// location/radius and not paginated, since getPublicItems() only returns one
-// page of whatever region is selected.
 export async function getItemStats(): Promise<{ activeCount: number; resolvedCount: number }> {
   const rows = await db
     .select({

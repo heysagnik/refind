@@ -26,7 +26,6 @@ export function ImageRedactor({ value, onChange, onRemove }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const baseImageRef = useRef<HTMLImageElement | null>(null);
-  // grouped into strokes so undo removes a whole stroke, not one point
   const currentStrokeRef = useRef<Point[]>([]);
   const [preview, setPreview] = useState<string | null>(value || null);
   const [strokes, setStrokes] = useState<Point[][]>([]);
@@ -34,7 +33,6 @@ export function ImageRedactor({ value, onChange, onRemove }: Props) {
   const [brushRadius, setBrushRadius] = useState<number>(BRUSH_SIZES[1].radius);
   const [cursor, setCursor] = useState<{ x: number; y: number; size: number } | null>(null);
 
-  // draw an already-selected photo (e.g. switching slots in PhotoPicker) as the undo base
   useEffect(() => {
     if (!value) return;
     const canvas = canvasRef.current;

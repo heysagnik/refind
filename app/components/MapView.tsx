@@ -29,7 +29,6 @@ function makeIcon(active: boolean) {
 const defaultIcon = makeIcon(false);
 const activeIcon = makeIcon(true);
 
-// frames all markers instead of a fixed zoom that can leave pins off-screen
 function FitBounds({ items }: { items: MapItem[] }) {
   const map = useMap();
 
@@ -67,7 +66,6 @@ export function MapView({ items, highlightedId, onMarkerHover, scrollWheelZoom =
     <MapContainer
       center={center}
       zoom={13}
-      // contains Leaflet's z-index:1000 controls so they can't render above page chrome
       className="relative z-0"
       style={{ height: '100%', width: '100%' }}
       scrollWheelZoom={scrollWheelZoom}

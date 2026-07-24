@@ -27,8 +27,6 @@ function readStoredLocation(): StoredLocation | null {
   }
 }
 
-// called from the browser directly (not our server) so it resolves the visitor's
-// real public IP even in local dev, with no permission prompt needed
 async function ipGeolocate(): Promise<StoredLocation | null> {
   try {
     const res = await fetch('https://ipwho.is/');
@@ -60,7 +58,6 @@ export function RegionPicker({ compact = false }: Props) {
   const [searching, setSearching] = useState(false);
   const autoTriedRef = useRef(false);
 
-  // URL params are the source of truth on Explore; elsewhere just show the last pick
   const urlLat = searchParams.get('lat');
   const urlLng = searchParams.get('lng');
   const urlCity = searchParams.get('city');
@@ -70,7 +67,6 @@ export function RegionPicker({ compact = false }: Props) {
     ? { lat: parseFloat(urlLat!), lng: parseFloat(urlLng!), city: urlCity || '' }
     : stored;
 
-  // client-only (localStorage/fetch aren't available during SSR)
   useEffect(() => {
     const existing = readStoredLocation();
     if (existing) {
@@ -79,7 +75,6 @@ export function RegionPicker({ compact = false }: Props) {
       return;
     }
 
-    // nothing saved yet — silently try IP-based detection once
     if (onExploreWithLocation || autoTriedRef.current) return;
     autoTriedRef.current = true;
     ipGeolocate().then((loc) => {
@@ -100,7 +95,6 @@ export function RegionPicker({ compact = false }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlLat, urlLng, urlCity]);
 
-  // debounced free-text search via Nominatim
   useEffect(() => {
     if (query.trim().length < 2) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -185,11 +179,6 @@ export function RegionPicker({ compact = false }: Props) {
       </button>
 
       {open && createPortal(
-        // portaled to <body>: RegionPicker lives inside the header, which has
-        // backdrop-blur — any ancestor filter/backdrop-filter becomes the
-        // containing block for `position: fixed` descendants, so without this
-        // the overlay was positioning itself against the header bar instead
-        // of the viewport
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm"
           onClick={() => setOpen(false)}

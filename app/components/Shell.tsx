@@ -9,7 +9,6 @@ import { RegionPicker } from '@/app/components/RegionPicker';
 import { Footer } from '@/app/components/Footer';
 
 function Logo({ compact = false }: { compact?: boolean }) {
-  // desktop + mobile headers both render this at once; unique ids avoid colliding SVG defs
   const uid = useId();
   const bgId = `${uid}-bg`;
   const sheenId = `${uid}-sheen`;
@@ -116,8 +115,6 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? '/';
   const { data: session, refetch } = useSession();
 
-  // login/signup use server actions, which bypass the client SDK's session store —
-  // refetch on route change so post-auth redirects actually update the header
   useEffect(() => {
     refetch?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps

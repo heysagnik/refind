@@ -22,7 +22,6 @@ function nextId() {
 }
 
 export function PhotoPicker({ values, onChange, max = 3 }: Props) {
-  // stable ids, not array index, so removing a photo reliably remounts ImageRedactor
   const [slots, setSlots] = useState<Slot[]>(() => values.map((src) => ({ id: nextId(), src })));
   const [activeIndex, setActiveIndex] = useState(0);
 

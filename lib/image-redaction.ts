@@ -56,7 +56,6 @@ export function applyBlurRegion(
   ctx.arc(x, y, r, 0, Math.PI * 2);
   ctx.clip();
 
-  // pixelate rather than blur — guarantees the underlying detail is destroyed
   const blockSize = Math.max(4, Math.round(r / 5));
   const tinyW = Math.max(1, Math.round(sw / blockSize));
   const tinyH = Math.max(1, Math.round(sh / blockSize));
