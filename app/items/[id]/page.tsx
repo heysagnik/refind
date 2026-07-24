@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
@@ -15,6 +16,50 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const item = await getItemByIdPublic(id);
+
+  if (!item) {
+    return {
+      title: 'Item Not Found',
+      description: 'The requested lost or found item listing could not be found.',
+    };
+  }
+
+  const categoryLabel = categoryLabels[item.category] ?? item.category;
+  const title = `Found ${item.title} (${categoryLabel})`;
+  const description = item.description
+    ? item.description.slice(0, 160)
+    : `Found ${categoryLabel} in ${item.locationName || 'local area'}. Claim securely by answering verification questions.`;
+  const image = item.imageUrl || '/og-image.png';
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      images: [
+        {
+          url: image,
+          alt: item.title,
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
+    alternates: {
+      canonical: `/items/${item.id}`,
+    },
+  };
+}
+
 export default async function ItemDetailPage({ params }: Props) {
   const { id } = await params;
   const [item, session] = await Promise.all([
@@ -27,8 +72,27 @@ export default async function ItemDetailPage({ params }: Props) {
   const categoryLabel = categoryLabels[item.category] ?? item.category;
   const photos = item.imageUrls?.length ? item.imageUrls : item.imageUrl ? [item.imageUrl] : [];
 
+  const itemJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Thing',
+    name: item.title,
+    description: item.description || `Found ${categoryLabel}`,
+    category: categoryLabel,
+    image: photos,
+    locationCreated: item.locationName
+      ? {
+          '@type': 'Place',
+          name: item.locationName,
+        }
+      : undefined,
+  };
+
   return (
     <main className="flex-1 flex flex-col pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemJsonLd) }}
+      />
       {/* Mobile hero photo with floating controls */}
       {photos.length > 0 && (
         <div className="relative lg:hidden aspect-[4/3] w-full">
