@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { PinIcon, ChevronDownIcon, CloseIcon, SearchIcon } from '@/app/components/icons';
 import { POPULAR_CITIES } from '@/lib/location';
@@ -183,7 +184,12 @@ export function RegionPicker({ compact = false }: Props) {
         />
       </button>
 
-      {open && (
+      {open && createPortal(
+        // portaled to <body>: RegionPicker lives inside the header, which has
+        // backdrop-blur — any ancestor filter/backdrop-filter becomes the
+        // containing block for `position: fixed` descendants, so without this
+        // the overlay was positioning itself against the header bar instead
+        // of the viewport
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm"
           onClick={() => setOpen(false)}
@@ -276,7 +282,8 @@ export function RegionPicker({ compact = false }: Props) {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

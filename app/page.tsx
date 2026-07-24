@@ -1,4 +1,4 @@
-import { getPublicItems } from '@/app/actions/items';
+import { getPublicItems, getItemStats } from '@/app/actions/items';
 import { ExploreView } from '@/app/components/ExploreView';
 
 interface Props {
@@ -13,9 +13,10 @@ export default async function HomePage({ searchParams }: Props) {
   const isNearby = !!(lat && lng);
   const radiusKm = 25;
 
-  const { items: allItems, hasMore } = await getPublicItems({ lat, lng, radiusKm });
-  const activeCount = allItems.filter((i) => i.status === 'active').length;
-  const resolvedCount = allItems.filter((i) => i.status === 'claimed' || i.status === 'closed').length;
+  const [{ items: allItems, hasMore }, { activeCount, resolvedCount }] = await Promise.all([
+    getPublicItems({ lat, lng, radiusKm }),
+    getItemStats(),
+  ]);
 
   return (
     <main className="flex flex-col flex-1">

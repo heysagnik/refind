@@ -142,6 +142,26 @@ export async function getPublicItems({
   return { items: rows.slice(0, PUBLIC_ITEMS_PAGE_SIZE), hasMore };
 }
 
+// Sitewide totals for the Explore page header — deliberately unfiltered by
+// location/radius and not paginated, since getPublicItems() only returns one
+// page of whatever region is selected.
+export async function getItemStats(): Promise<{ activeCount: number; resolvedCount: number }> {
+  const rows = await db
+    .select({
+      status: items.status,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(items)
+    .groupBy(items.status);
+
+  const activeCount = rows.find((r) => r.status === 'active')?.count ?? 0;
+  const resolvedCount = rows
+    .filter((r) => r.status === 'claimed' || r.status === 'closed')
+    .reduce((sum, r) => sum + r.count, 0);
+
+  return { activeCount, resolvedCount };
+}
+
 export async function getItemByIdPublic(id: string) {
   const [item] = await db
     .select({
