@@ -48,6 +48,7 @@ export default async function HomePage({ searchParams }: Props) {
       </header>
 
       <ExploreView
+        key={`${lat ?? 'all'}-${lng ?? 'all'}`}
         initialItems={allItems}
         initialHasMore={hasMore}
         lat={lat}
