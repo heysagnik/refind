@@ -9,9 +9,7 @@ import { RegionPicker } from '@/app/components/RegionPicker';
 import { Footer } from '@/app/components/Footer';
 
 function Logo({ compact = false }: { compact?: boolean }) {
-  // Desktop and mobile headers both render a Logo at the same time (CSS just
-  // hides whichever doesn't apply), so hardcoded SVG def ids would collide —
-  // two elements sharing an id breaks `url(#id)` gradient/filter references.
+  // desktop + mobile headers both render this at once; unique ids avoid colliding SVG defs
   const uid = useId();
   const bgId = `${uid}-bg`;
   const sheenId = `${uid}-sheen`;
@@ -118,14 +116,8 @@ export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? '/';
   const { data: session, refetch } = useSession();
 
-  // Login/signup/logout all happen via server actions that call better-auth's
-  // server API directly (not the client SDK's signIn/signOut), so the client
-  // session store — which only otherwise refetches on window focus or a
-  // polling interval — never learns the cookie changed. Shell persists across
-  // client-side navigations (it's in the root layout), so without this it
-  // would keep showing the pre-login state until an unrelated focus event
-  // happened to trigger a refetch. Refetching on every route change catches
-  // the post-auth redirect cheaply (it's just a session cookie check).
+  // login/signup use server actions, which bypass the client SDK's session store —
+  // refetch on route change so post-auth redirects actually update the header
   useEffect(() => {
     refetch?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps

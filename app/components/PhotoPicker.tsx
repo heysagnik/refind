@@ -22,11 +22,7 @@ function nextId() {
 }
 
 export function PhotoPicker({ values, onChange, max = 3 }: Props) {
-  // Each photo gets a stable id, independent of its position in the array.
-  // Using array index as the ImageRedactor `key` meant removing a photo
-  // (which resets the active index back to 0) could leave the key
-  // unchanged, so React reused the old editor instance instead of
-  // remounting it — the canvas kept showing the "removed" photo.
+  // stable ids, not array index, so removing a photo reliably remounts ImageRedactor
   const [slots, setSlots] = useState<Slot[]>(() => values.map((src) => ({ id: nextId(), src })));
   const [activeIndex, setActiveIndex] = useState(0);
 

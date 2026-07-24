@@ -109,11 +109,8 @@ export interface PublicItem {
   createdAt: Date;
 }
 
-// `fuzzed_location` is PostGIS `geography` with a GIST index (see schema.sql).
-// A "near me" / city search uses ST_DWithin so Postgres can use that index to
-// find nearby rows directly, instead of pulling an arbitrary page of recent
-// rows into the app and filtering in JS — which silently misses matches once
-// the table is larger than one page (the previous implementation).
+// ST_DWithin uses the GIST index on fuzzed_location (see schema.sql) instead of
+// filtering in JS after the fact, which silently missed matches past one page
 export async function getPublicItems({
   lat,
   lng,

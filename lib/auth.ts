@@ -4,10 +4,7 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "./db";
 import * as schema from "./schema";
 
-// Vercel sets these automatically on every deployment — preview and
-// production — with no manual config needed. Using them means auth keeps
-// working on each preview URL and after custom-domain/production URL
-// changes, instead of drifting out of sync with a hardcoded BETTER_AUTH_URL.
+// auto-set by Vercel on every deployment — keeps auth working on each preview URL
 function resolveBaseURL(): string {
   if (process.env.VERCEL_ENV === "production" && process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;

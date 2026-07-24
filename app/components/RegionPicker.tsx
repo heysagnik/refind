@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { PinIcon, ChevronDownIcon, CloseIcon } from '@/app/components/icons';
+import { PinIcon, ChevronDownIcon, CloseIcon, SearchIcon } from '@/app/components/icons';
 import { POPULAR_CITIES } from '@/lib/location';
-import { reverseGeocodeAction } from '@/app/actions/location';
+import { reverseGeocodeAction, searchLocationAction, type LocationSearchResult } from '@/app/actions/location';
 
 const STORAGE_KEY = 'refind:location';
 
@@ -26,12 +26,8 @@ function readStoredLocation(): StoredLocation | null {
   }
 }
 
-// IP-based lookup, called directly from the browser rather than routed
-// through our own server: that way it resolves the visitor's actual public
-// IP (works correctly in local dev too, since the request truly leaves from
-// their machine), and it needs no permission prompt at all — unlike
-// navigator.geolocation, which is reserved for the explicit "Use current
-// location" button below.
+// called from the browser directly (not our server) so it resolves the visitor's
+// real public IP even in local dev, with no permission prompt needed
 async function ipGeolocate(): Promise<StoredLocation | null> {
   try {
     const res = await fetch('https://ipwho.is/');
@@ -58,12 +54,12 @@ export function RegionPicker({ compact = false }: Props) {
   const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stored, setStored] = useState<StoredLocation | null>(null);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<LocationSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const autoTriedRef = useRef(false);
 
-  // On the Explore page itself, the URL query params are the source of
-  // truth (so server-side data fetching and the picker agree). On every
-  // other page there's nothing to filter, so fall back to the last location
-  // the person picked, persisted client-side, purely for display.
+  // URL params are the source of truth on Explore; elsewhere just show the last pick
   const urlLat = searchParams.get('lat');
   const urlLng = searchParams.get('lng');
   const urlCity = searchParams.get('city');
@@ -73,9 +69,7 @@ export function RegionPicker({ compact = false }: Props) {
     ? { lat: parseFloat(urlLat!), lng: parseFloat(urlLng!), city: urlCity || '' }
     : stored;
 
-  // Runs once on mount (client-only — `localStorage`/geolocation don't exist
-  // during SSR, so this can't be a lazy useState initializer without either
-  // crashing server-side or causing a server/client hydration mismatch).
+  // client-only (localStorage/fetch aren't available during SSR)
   useEffect(() => {
     const existing = readStoredLocation();
     if (existing) {
@@ -84,10 +78,7 @@ export function RegionPicker({ compact = false }: Props) {
       return;
     }
 
-    // First visit with nothing saved yet: silently detect an approximate
-    // location by IP instead of leaving the picker on a generic placeholder.
-    // No permission prompt — see ipGeolocate() above. A failed lookup just
-    // leaves the picker on "Set location", same as before.
+    // nothing saved yet — silently try IP-based detection once
     if (onExploreWithLocation || autoTriedRef.current) return;
     autoTriedRef.current = true;
     ipGeolocate().then((loc) => {
@@ -108,10 +99,28 @@ export function RegionPicker({ compact = false }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlLat, urlLng, urlCity]);
 
+  // debounced free-text search via Nominatim
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setResults([]);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    const handle = setTimeout(async () => {
+      const found = await searchLocationAction(query);
+      setResults(found);
+      setSearching(false);
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [query]);
+
   const active = !!current;
 
   function goTo(lat: number, lng: number, city: string) {
     setOpen(false);
+    setQuery('');
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat, lng, city }));
     setStored({ lat, lng, city });
     router.push(`/?lat=${lat}&lng=${lng}&city=${encodeURIComponent(city)}`);
@@ -119,6 +128,7 @@ export function RegionPicker({ compact = false }: Props) {
 
   function clear() {
     setOpen(false);
+    setQuery('');
     localStorage.removeItem(STORAGE_KEY);
     setStored(null);
     router.push('/');
@@ -174,50 +184,99 @@ export function RegionPicker({ compact = false }: Props) {
       </button>
 
       {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-1/2 -translate-x-1/2 top-[calc(100%+8px)] w-[min(288px,calc(100vw-32px))] bg-surface rounded-md border border-line shadow-elevated overflow-hidden z-50">
-            {active && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/40 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="w-full max-w-[440px] max-h-[80vh] bg-surface rounded-xl border border-line shadow-elevated overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+              <h2 className="text-[16px] font-bold">Choose a location</h2>
               <button
                 type="button"
-                onClick={clear}
-                className="flex items-center gap-2.5 w-full text-left px-4 py-3 text-[14px] font-semibold text-ink-soft hover:bg-bg transition-colors cursor-pointer border-b border-line"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-bg text-ink-soft cursor-pointer transition-colors"
               >
-                <CloseIcon className="w-4 h-4" />
-                Clear location
+                <CloseIcon className="w-[18px] h-[18px]" />
               </button>
-            )}
-
-            <button
-              type="button"
-              onClick={useCurrentLocation}
-              disabled={detecting}
-              className="flex items-center gap-2.5 w-full text-left px-4 py-3 text-[14px] font-semibold text-accent hover:bg-accent-soft/40 transition-colors cursor-pointer disabled:opacity-60"
-            >
-              <PinIcon className="w-4 h-4" />
-              {detecting ? 'Locating…' : 'Use current location'}
-            </button>
-            {error && <p className="px-4 pb-2 text-xs text-danger -mt-1">{error}</p>}
-
-            <div className="px-4 pt-2.5 pb-1.5 text-[11px] font-bold text-ink-faint uppercase tracking-wide border-t border-line">
-              Popular cities
             </div>
-            <div className="max-h-64 overflow-y-auto pb-1">
-              {POPULAR_CITIES.map((city) => (
+
+            <div className="flex flex-col gap-1 p-4 overflow-y-auto">
+              <div className="relative mb-2">
+                <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-faint" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search for a city or place"
+                  autoFocus
+                  className="w-full bg-bg border border-transparent focus:border-accent focus:bg-surface rounded-md pl-10 pr-4 py-3 text-[15px] text-ink placeholder:text-ink-faint focus:outline-none focus:ring-4 focus:ring-accent-soft/60 transition-all duration-150"
+                />
+              </div>
+
+              {active && (
                 <button
-                  key={city.name}
                   type="button"
-                  onClick={() => goTo(city.lat, city.lng, city.name)}
-                  className={`flex items-center justify-between w-full text-left px-4 py-2.5 text-[14px] font-medium hover:bg-bg transition-colors cursor-pointer ${
-                    current?.city === city.name ? 'text-accent font-semibold' : 'text-ink'
-                  }`}
+                  onClick={clear}
+                  className="flex items-center gap-2.5 w-full text-left px-1 py-2.5 text-[14px] font-semibold text-ink-soft hover:text-ink transition-colors cursor-pointer"
                 >
-                  {city.name}
+                  <CloseIcon className="w-4 h-4" />
+                  Clear location
                 </button>
-              ))}
+              )}
+
+              <button
+                type="button"
+                onClick={useCurrentLocation}
+                disabled={detecting}
+                className="flex items-center gap-2.5 w-full text-left px-1 py-2.5 text-[14px] font-semibold text-accent hover:text-accent-hover transition-colors cursor-pointer disabled:opacity-60"
+              >
+                <PinIcon className="w-4 h-4" />
+                {detecting ? 'Locating…' : 'Use current location'}
+              </button>
+              {error && <p className="px-1 pb-1 text-xs text-danger">{error}</p>}
+
+              {query.trim().length >= 2 ? (
+                <>
+                  <div className="px-1 pt-3 pb-1 text-[11px] font-bold text-ink-faint uppercase tracking-wide">
+                    {searching ? 'Searching…' : results.length === 0 ? 'No matches' : 'Results'}
+                  </div>
+                  {results.map((r, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => goTo(r.lat, r.lng, r.name)}
+                      className="text-left px-1 py-2.5 text-[14px] font-medium text-ink hover:bg-bg rounded-md transition-colors cursor-pointer"
+                    >
+                      {r.name}
+                    </button>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <div className="px-1 pt-3 pb-1 text-[11px] font-bold text-ink-faint uppercase tracking-wide">
+                    Popular cities
+                  </div>
+                  {POPULAR_CITIES.map((city) => (
+                    <button
+                      key={city.name}
+                      type="button"
+                      onClick={() => goTo(city.lat, city.lng, city.name)}
+                      className={`flex items-center justify-between w-full text-left px-1 py-2.5 text-[14px] font-medium hover:bg-bg rounded-md transition-colors cursor-pointer ${
+                        current?.city === city.name ? 'text-accent font-semibold' : 'text-ink'
+                      }`}
+                    >
+                      {city.name}
+                    </button>
+                  ))}
+                </>
+              )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
