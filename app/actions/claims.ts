@@ -5,30 +5,18 @@ import { db } from '@/lib/db';
 import { items, claims, profiles } from '@/lib/schema';
 import { headers } from 'next/headers';
 import { sql, eq } from 'drizzle-orm';
-import crypto from 'crypto';
-
-async function hashAnswer(answer: string, saltAndHash: string) {
-  const [salt, storedHash] = saltAndHash.split(':');
-  const candidate = await crypto.createHash('sha256').update(`${salt}:${answer.toLowerCase().trim()}`).digest('hex');
-  return candidate === storedHash;
-}
 
 export async function submitClaimAction(itemId: string, answer1: string, answer2: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) throw new Error('Unauthorized');
 
   const [item] = await db
-    .select({ answer1Hash: items.answer1Hash, answer2Hash: items.answer2Hash, status: items.status, finderId: items.finderId })
+    .select({ status: items.status, finderId: items.finderId })
     .from(items)
     .where(eq(items.id, itemId));
 
   if (!item || item.status !== 'active') throw new Error('Item not available');
   if (item.finderId === session.user.id) throw new Error('You cannot claim your own report');
-
-  const a1Ok = await hashAnswer(answer1, item.answer1Hash);
-  const a2Ok = await hashAnswer(answer2, item.answer2Hash);
-
-  if (!a1Ok || !a2Ok) throw new Error('Answers do not match');
 
   await db.execute(
     sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`
