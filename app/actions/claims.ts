@@ -4,7 +4,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { items, claims, profiles } from '@/lib/schema';
 import { headers } from 'next/headers';
-import { sql, eq } from 'drizzle-orm';
+import { sql, eq, and } from 'drizzle-orm';
 
 export async function submitClaimAction(itemId: string, answer1: string, answer2: string) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -22,12 +22,26 @@ export async function submitClaimAction(itemId: string, answer1: string, answer2
     sql`SELECT set_config('app.current_user_id', ${session.user.id}, true)`
   );
 
-  await db.insert(claims).values({
-    itemId,
-    claimerId: session.user.id,
-    answer1,
-    answer2,
-  });
+  const [existing] = await db
+    .select({ id: claims.id, status: claims.status })
+    .from(claims)
+    .where(and(eq(claims.itemId, itemId), eq(claims.claimerId, session.user.id)));
+
+  if (!existing) {
+    await db.insert(claims).values({
+      itemId,
+      claimerId: session.user.id,
+      answer1,
+      answer2,
+    });
+  } else if (existing.status === 'rejected') {
+    await db
+      .update(claims)
+      .set({ answer1, answer2, status: 'pending_review', finderConfirmed: false, claimerConfirmed: false, resolvedAt: null })
+      .where(eq(claims.id, existing.id));
+  } else {
+    throw new Error('You already have a claim on this item');
+  }
 }
 
 export async function reviewClaimAction(claimId: string, decision: 'approve' | 'reject') {
@@ -114,6 +128,8 @@ export async function getClaimReview(claimId: string) {
       itemFinderId: items.finderId,
       itemQuestion1: items.question1,
       itemQuestion2: items.question2,
+      itemAnswer1: items.answer1,
+      itemAnswer2: items.answer2,
       claimerDisplayName: profiles.displayName,
       claimerWhatsapp: profiles.whatsappNumber,
       claimerDocType: profiles.docType,
@@ -140,6 +156,7 @@ export async function getClaimReview(claimId: string) {
       imageUrl: row.itemImageUrl,
       finderId: row.itemFinderId,
       questions: [row.itemQuestion1, row.itemQuestion2] as [string, string],
+      referenceAnswers: [row.itemAnswer1, row.itemAnswer2] as [string, string],
     },
     claimer: {
       displayName: row.claimerDisplayName,

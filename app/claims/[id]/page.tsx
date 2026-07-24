@@ -2,6 +2,7 @@ import { redirect, notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { getClaimReview } from '@/app/actions/claims';
+import { answerMatchLevel } from '@/lib/text';
 import { Card, CardImage, CardBody } from '@/app/components/ui/Card';
 import { Chip } from '@/app/components/ui/Chip';
 import { Header } from '@/app/components/ui/Header';
@@ -39,14 +40,29 @@ export default async function ClaimReviewPage({ params }: Props) {
         <section className="flex flex-col gap-2 mb-6">
           <h2 className="text-[13px] font-bold text-ink-soft uppercase tracking-wide">Claimer&rsquo;s answers</h2>
           <div className="bg-bg rounded-md p-4 space-y-3">
-            <div>
-              <div className="text-xs text-ink-soft">Q: {claim.item.questions?.[0] || 'Question 1'}</div>
-              <div className="text-base mt-0.5 font-medium">{claim.answer1}</div>
-            </div>
-            <div>
-              <div className="text-xs text-ink-soft">Q: {claim.item.questions?.[1] || 'Question 2'}</div>
-              <div className="text-base mt-0.5 font-medium">{claim.answer2}</div>
-            </div>
+            {([
+              [claim.item.questions?.[0], claim.answer1, claim.item.referenceAnswers?.[0]],
+              [claim.item.questions?.[1], claim.answer2, claim.item.referenceAnswers?.[1]],
+            ] as const).map(([question, claimerAnswer, referenceAnswer], i) => {
+              const match = referenceAnswer ? answerMatchLevel(referenceAnswer, claimerAnswer) : 'different';
+              return (
+                <div key={i}>
+                  <div className="text-xs text-ink-soft">Q: {question || `Question ${i + 1}`}</div>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="text-base font-medium">{claimerAnswer}</div>
+                    {match !== 'different' && (
+                      <Chip
+                        label={match === 'exact' ? 'Matches' : 'Similar'}
+                        className={match === 'exact' ? '!bg-success-soft !text-success text-[11px] !px-2 !py-0.5' : '!bg-warning-soft !text-accent-warm text-[11px] !px-2 !py-0.5'}
+                      />
+                    )}
+                  </div>
+                  {referenceAnswer && (
+                    <div className="text-xs text-ink-faint mt-1">Your answer: {referenceAnswer}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <section className="flex flex-col gap-2 mt-4">

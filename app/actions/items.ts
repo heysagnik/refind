@@ -10,10 +10,6 @@ import { fuzzCoordinate, reverseGeocode } from '@/lib/location';
 import { uploadToR2 } from '@/lib/r2';
 import crypto from 'crypto';
 
-async function hashAnswer(answer: string, salt: string): Promise<string> {
-  return crypto.createHash('sha256').update(`${salt}:${answer.toLowerCase().trim()}`).digest('hex');
-}
-
 export async function createItemAction(formData: FormData) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) throw new Error('Unauthorized');
@@ -35,9 +31,6 @@ export async function createItemAction(formData: FormData) {
   imagesBase64 = imagesBase64.filter(Boolean).slice(0, 3);
 
   const [q1, q2] = pickQuestions(category);
-  const salt = crypto.randomBytes(16).toString('hex');
-  const answer1Hash = `${salt}:${await hashAnswer(answer1, salt)}`;
-  const answer2Hash = `${salt}:${await hashAnswer(answer2, salt)}`;
 
   const imageUrls: string[] = [];
   for (const base64 of imagesBase64) {
@@ -69,8 +62,8 @@ export async function createItemAction(formData: FormData) {
     rawLocation: sql`ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)`,
     question1: q1,
     question2: q2,
-    answer1Hash,
-    answer2Hash,
+    answer1,
+    answer2,
   });
 }
 

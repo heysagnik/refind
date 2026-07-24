@@ -75,8 +75,8 @@ CREATE TABLE items (
   raw_location  GEOGRAPHY(Point, 4326) NOT NULL,
   question_1    TEXT NOT NULL,
   question_2    TEXT NOT NULL,
-  answer_1_hash TEXT NOT NULL,
-  answer_2_hash TEXT NOT NULL,
+  answer_1      TEXT NOT NULL DEFAULT '',
+  answer_2      TEXT NOT NULL DEFAULT '',
   status        TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'claimed', 'closed')),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -159,7 +159,7 @@ CREATE POLICY profiles_owner ON profiles
 -- profiles: insert allowed for new signups
 CREATE POLICY profiles_insert ON profiles FOR INSERT WITH CHECK (true);
 
--- items: public SELECT (fuzzed + public columns only; raw_location and answer hashes excluded by column grants)
+-- items: public SELECT (fuzzed + public columns only; raw_location and reference answers excluded by column grants)
 CREATE POLICY items_public_select ON items FOR SELECT USING (true);
 
 -- items: finder full access
@@ -201,7 +201,7 @@ CREATE POLICY claims_claimer_update ON claims FOR UPDATE
 -- category_questions: public read
 CREATE POLICY category_questions_select ON category_questions FOR SELECT USING (true);
 
--- ── Column-level grants: restrict raw_location + answer hashes ──
+-- ── Column-level grants: restrict raw_location + reference answers ──
 
 REVOKE SELECT (raw_location) ON items FROM PUBLIC;
-REVOKE SELECT (answer_1_hash, answer_2_hash) ON items FROM PUBLIC;
+REVOKE SELECT (answer_1, answer_2) ON items FROM PUBLIC;

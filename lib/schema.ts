@@ -68,8 +68,8 @@ export const items = pgTable("items", {
   rawLocation: geometry("raw_location", { type: "point", srid: 4326 }).notNull(),
   question1: text("question_1").notNull(),
   question2: text("question_2").notNull(),
-  answer1Hash: text("answer_1_hash").notNull(),
-  answer2Hash: text("answer_2_hash").notNull(),
+  answer1: text("answer_1").notNull().default(""),
+  answer2: text("answer_2").notNull().default(""),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
