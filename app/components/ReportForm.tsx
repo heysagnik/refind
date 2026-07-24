@@ -12,27 +12,34 @@ import { PinIcon, CheckIcon } from '@/app/components/icons';
 const categoryList = Object.entries(categoryLabels);
 
 const categoryEmoji: Record<string, string> = {
-  phone: '📱',
-  laptop: '💻',
-  wallet: '👛',
-  keys: '🔑',
-  documents: '📄',
-  bag: '🎒',
-  clothing: '🧥',
-  footwear: '👟',
-  jewelry: '💍',
-  glasses: '👓',
-  watch: '⌚',
-  headphones: '🎧',
+  phone: 'https://em-content.zobj.net/source/apple/453/mobile-phone_1f4f1.png',
+  laptop: 'https://em-content.zobj.net/source/apple/453/laptop_1f4bb.png',
+  wallet: 'https://em-content.zobj.net/source/apple/453/purse_1f45b.png',
+  keys: 'https://em-content.zobj.net/source/apple/453/key_1f511.png',
+  documents: 'https://em-content.zobj.net/source/apple/453/identification-card_1faaa.png',
+  bag: 'https://em-content.zobj.net/source/apple/453/luggage_1f9f3.png',
+  clothing: 'https://em-content.zobj.net/source/apple/453/coat_1f9e5.png',
+  footwear: 'https://em-content.zobj.net/source/apple/453/running-shoe_1f45f.png',
+  jewelry: 'https://em-content.zobj.net/source/apple/453/ring_1f48d.png',
+  glasses: 'https://em-content.zobj.net/source/apple/453/sunglasses_1f576-fe0f.png',
+  watch: 'https://em-content.zobj.net/source/apple/453/watch_231a.png',
+  headphones: 'https://em-content.zobj.net/source/apple/453/headphone_1f3a7.png',
   waterbottle: '🧴',
-  umbrella: '☂️',
+  umbrella: 'https://em-content.zobj.net/source/apple/453/closed-umbrella_1f302.png',
   toy: '🧸',
   other: '📦',
 };
 
+function CategoryIcon({ icon }: { icon: string }) {
+  if (icon.startsWith('http')) {
+    return <img src={icon} alt="" className="w-7 h-7 object-contain" />;
+  }
+  return <span className="text-xl leading-none">{icon}</span>;
+}
+
 export function ReportForm() {
   const router = useRouter();
-  const [category, setCategory] = useState('electronics');
+  const [category, setCategory] = useState(categoryList[0][0]);
   const [images, setImages] = useState<string[]>([]);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -104,7 +111,7 @@ export function ReportForm() {
                   : 'bg-bg border-transparent text-ink-soft hover:border-line-strong'
               }`}
             >
-              <span className="text-xl leading-none">{categoryEmoji[key] ?? '📦'}</span>
+              <CategoryIcon icon={categoryEmoji[key] ?? '📦'} />
               <span className="text-[11px] font-semibold leading-tight">{label}</span>
             </button>
           ))}

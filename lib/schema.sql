@@ -66,7 +66,7 @@ CREATE TABLE items (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   finder_id     UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   title         TEXT NOT NULL,
-  category      TEXT NOT NULL CHECK (category IN ('electronics', 'documents', 'accessories', 'keys', 'clothing', 'other')),
+  category      TEXT NOT NULL CHECK (category IN ('phone', 'laptop', 'wallet', 'keys', 'documents', 'bag', 'clothing', 'footwear', 'jewelry', 'glasses', 'watch', 'headphones', 'waterbottle', 'umbrella', 'toy', 'other')),
   description   TEXT NOT NULL DEFAULT '',
   image_url     TEXT NOT NULL DEFAULT '',
   image_urls    JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -104,7 +104,7 @@ CREATE INDEX idx_claims_claimer ON claims (claimer_id);
 
 CREATE TABLE category_questions (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  category      TEXT NOT NULL CHECK (category IN ('electronics', 'documents', 'accessories', 'keys', 'clothing', 'other')),
+  category      TEXT NOT NULL CHECK (category IN ('phone', 'laptop', 'wallet', 'keys', 'documents', 'bag', 'clothing', 'footwear', 'jewelry', 'glasses', 'watch', 'headphones', 'waterbottle', 'umbrella', 'toy', 'other')),
   question_text TEXT NOT NULL,
   active        BOOLEAN NOT NULL DEFAULT true
 );
@@ -112,21 +112,21 @@ CREATE TABLE category_questions (
 -- ── Seed questions ───────────────────────────────────────────
 
 INSERT INTO category_questions (category, question_text) VALUES
-('electronics', 'What brand is it?'),
-('electronics', 'Any distinctive scratches or stickers?'),
-('electronics', 'What color is it?'),
-('electronics', 'What is the approximate model or year?'),
-('electronics', 'Does it have a case or cover?'),
+('phone', 'What brand is it?'),
+('phone', 'Any distinctive scratches or stickers?'),
+('phone', 'What color is it?'),
+('phone', 'What is the approximate model or year?'),
+('phone', 'Does it have a case or cover?'),
 ('documents', 'What is the name on the document?'),
 ('documents', 'What type of document is it?'),
 ('documents', 'What is the issuing authority?'),
 ('documents', 'Any distinctive markings or stamps?'),
 ('documents', 'What is the document number ending in? (last 3 digits)'),
-('accessories', 'What brand is it?'),
-('accessories', 'What material is it made of?'),
-('accessories', 'What color is it?'),
-('accessories', 'Any unique charms or attachments?'),
-('accessories', 'Approximate size or dimensions?'),
+('jewelry', 'What brand is it?'),
+('jewelry', 'What material is it made of?'),
+('jewelry', 'What color is it?'),
+('jewelry', 'Any unique charms or attachments?'),
+('jewelry', 'Approximate size or dimensions?'),
 ('keys', 'How many keys are on the keychain?'),
 ('keys', 'Any distinctive keychain or charm?'),
 ('keys', 'What color is the keychain?'),
