@@ -1,65 +1,58 @@
-import Image from "next/image";
+import { getPublicItems } from '@/app/actions/items';
+import { ExploreView } from '@/app/components/ExploreView';
 
-export default function Home() {
+interface Props {
+  searchParams: Promise<{ lat?: string; lng?: string; city?: string }>;
+}
+
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const lat = params.lat ? parseFloat(params.lat) : undefined;
+  const lng = params.lng ? parseFloat(params.lng) : undefined;
+  const city = params.city;
+  const isNearby = !!(lat && lng);
+  const radiusKm = 25;
+
+  const { items: allItems, hasMore } = await getPublicItems({ lat, lng, radiusKm });
+  const activeCount = allItems.filter((i) => i.status === 'active').length;
+  const resolvedCount = allItems.filter((i) => i.status === 'claimed' || i.status === 'closed').length;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex flex-col flex-1">
+      <header className="px-6 md:px-8 lg:px-10 pt-8 md:pt-14 pb-8 md:pb-10 max-w-[1440px] mx-auto w-full">
+        <div className="md:flex md:items-end md:justify-between md:gap-8">
+          <div>
+            <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight leading-[1.04] max-w-[640px]">
+              Lost something? Someone might have found it.
+            </h1>
+            <p className="text-ink-soft text-base md:text-lg max-w-[480px] mt-4">
+              {isNearby
+                ? `Browse reported finds near ${city || 'you'}. If yours is here, claim it by answering two quick questions.`
+                : 'Browse reported finds. If yours is here, claim it by answering two quick questions.'}
+            </p>
+          </div>
+
+          <div className="hidden md:flex items-center gap-6 shrink-0 pb-1">
+            <div className="flex flex-col items-start">
+              <span className="text-[28px] font-extrabold tracking-tight text-ink">{activeCount}</span>
+              <span className="text-[13px] font-semibold text-ink-soft">Active finds</span>
+            </div>
+            <div className="w-px h-10 bg-line" />
+            <div className="flex flex-col items-start">
+              <span className="text-[28px] font-extrabold tracking-tight text-success">{resolvedCount}</span>
+              <span className="text-[13px] font-semibold text-ink-soft">Reunited</span>
+            </div>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </header>
+
+      <ExploreView
+        initialItems={allItems}
+        initialHasMore={hasMore}
+        lat={lat}
+        lng={lng}
+        radiusKm={radiusKm}
+      />
+    </main>
   );
 }
